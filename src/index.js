@@ -7,7 +7,7 @@ const app = express();
 app.use(express.json());
 
 app.use(indexRoutes);
-app.use(notesRoutes);
+app.use('/api', notesRoutes);
 
 app.listen(3000, () => {
   console.log('App listening on port 3000!');
