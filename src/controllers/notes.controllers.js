@@ -48,8 +48,18 @@ export const createNotes = async (req, res) => {
   });
 };
 
-export const updateNotes = (req, res) => {
-  res.send('Update a note');
+export const updateNotes = async (req, res) => {
+  const { id } = req.params;
+  const { title, description, author } = req.body;
+  const [result] = await pool.query(
+    'UPDATE notes SET title = IFNULL(?, title), description = IFNULL(?, description), author = IFNULL(?, author) WHERE id = ?',
+    [title, description, author, id]
+  );
+  if (result.affectedRows === 0) {
+    res.status(404).json({ message: 'Note not found' });
+  }
+  const [row] = await pool.query('SELECT * from notes WHERE id = ?', [id]);
+  res.json(row[0]);
 };
 
 export const deleteNotes = async (req, res) => {
