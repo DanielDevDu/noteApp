@@ -25,7 +25,7 @@ export const getNote = async (req, res) => {
 
 export const createNotes = async (req, res) => {
   try {
-    const { title, description, author } = req.body;
+    const { title, description, user_id } = req.body;
 
     if (!title || typeof title !== 'string') {
       return res
@@ -39,22 +39,31 @@ export const createNotes = async (req, res) => {
         .json({ message: 'Description must be a string not null' });
     }
 
-    if (!author || typeof author !== 'string') {
+    if (!user_id || typeof user_id !== 'number') {
       return res
         .status(400)
-        .json({ message: 'Author must be a string not null' });
+        .json({ message: 'user_id must be a number not null' });
     }
 
-    const [rows] = await pool.query(
-      'INSERT INTO notes (title, description, author) VALUES (?,?,?)',
-      [title, description, author]
-    );
-    res.send({
-      id: rows.insertId,
-      title,
-      description,
-      author,
-    });
+    const [user] = await pool.query('SELECT * from users WHERE id = ?', [
+      user_id,
+    ]);
+    if (user[0]) {
+      const [rows] = await pool.query(
+        'INSERT INTO notes (title, description, user_id) VALUES (?,?,?)',
+        [title, description, user_id]
+      );
+      const username = user[0].username;
+      res.send({
+        id: rows.insertId,
+        title,
+        description,
+        user_id,
+        username,
+      });
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -63,10 +72,15 @@ export const createNotes = async (req, res) => {
 export const updateNotes = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, author } = req.body;
+    const { title, description, user_id } = req.body;
+
+    if (user_id) {
+      return res.json({ message: "You can't change the user_id" });
+    }
+
     const [result] = await pool.query(
-      'UPDATE notes SET title = IFNULL(?, title), description = IFNULL(?, description), author = IFNULL(?, author) WHERE id = ?',
-      [title, description, author, id]
+      'UPDATE notes SET title = IFNULL(?, title), description = IFNULL(?, description) WHERE id = ?',
+      [title, description, id]
     );
     if (result.affectedRows === 0) {
       res.status(404).json({ message: 'Note not found' });
